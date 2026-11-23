@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="medclean-build" content="9505dcc920f5" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FieldReady Academy — 3D VR Crime Scene &amp; Hospital Biohazard Remediation Platform</title>
+  <meta name="description" content="Interactive 3D training demo for biohazard and hospital-room cleaning: walkable crime-scene lab, UV blacklight hospital room, visual guides, worked examples and a practice exam." />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0b1120" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="FieldReady Academy — 3D Biohazard &amp; Hospital Cleaning Simulator" />
+  <meta property="og:description" content="Walk a 3D crime-scene lab, clean a hospital room under UV blacklight, and learn with photos, diagrams, worked examples and a practice exam." />
+  <meta property="og:url" content="https://skyrey1234-pixel.github.io/fieldready-demo/academy/" />
+  <meta property="og:image" content="https://skyrey1234-pixel.github.io/fieldready-demo/og-card.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A9%BA%3C/text%3E%3C/svg%3E" />
+  <script src="./three.min.js"></script>
+  <script src="./medclean-data.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+      background: #060911;
+      color: #f8fafc;
+      user-select: none;
+      overflow-x: hidden;
+    }
+    /* ==================== TOP WEBSITE NAVIGATION HEADER ==================== */
+    .site-header {
+      background: #0b1120;
+      border-bottom: 1px solid #1e293b;
+      padding: 10px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 19px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      cursor: pointer;
+    }
+    .brand-logo .med { color: #38bdf8; }
+    .brand-logo .clean { color: #7dd3fc; }
+    .brand-logo .acad { color: #ffffff; font-weight: 700; }
+    .site-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-btn {
+      background: transparent;
+      color: #94a3b8;
+      border: 1px solid transparent;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .nav-btn:hover { color: #f8fafc; background: rgba(30, 41, 59, 0.7); }
+    .nav-btn.active {
+      background: rgba(14, 165, 233, 0.2);
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.55);
+      box-shadow: 0 0 18px rgba(14, 165, 233, 0.25);
+    }
+    .page-wrap {
+      max-width: 1460px;
+      margin: 0 auto;
+      padding: 12px 16px 28px;
+    }
+    /* ==================== SIMULATOR SHELL ==================== */
+    .sim-intro-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 10px 16px;
+    }
+    .sim-intro-text {
+      font-size: 12.5px;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+    .sim-mode-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      background: #060911;
+      padding: 4px;
+      border-radius: 11px;
+      border: 1px solid #1e293b;
+    }
+    .sim-mode-btn {
+      background: transparent;
+      color: #94a3b8;
+      border: none;
+      padding: 7px 11px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sim-mode-btn.active {
+      background: #0ea5e9;
+      color: #ffffff;
+      box-shadow: 0 0 14px rgba(14, 165, 233, 0.45);
+    }
+    .sim-grid {
+      display: grid;
+      grid-template-columns: 1.82fr 1fr;
+      gap: 12px;
+      align-items: stretch;
+    }
+    @media (max-width: 980px) {
+      .sim-grid { grid-template-columns: 1fr; }
+    }
+    .visor-viewport {
+      position: relative;
+      height: 590px;
+      background: #050811;
+      border: 4px solid #1e293b;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.7), inset 0 0 50px rgba(0,0,0,0.8);
+    }
+    #three-crime-mount {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 4;
+      cursor: grab;
+    }
+    #three-crime-mount:active { cursor: grabbing; }
+    #floating-callouts-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 16;
+    }
+    .floating-callout {
+      pointer-events: auto;
+      position: absolute;
+      transform: translate(-50%, -100%);
+      background: rgba(15, 23, 42, 0.9);
+      border: 1.5px solid rgba(250, 204, 21, 0.85);
+      border-radius: 8px;
+      padding: 4px 8px;
+      color: #f8fafc;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.65);
+      transition: transform 0.12s;
+    }
+    .floating-callout:hover { transform: translate(-50%, -100%) scale(1.07); }
+    .floating-callout.active {
+      border-color: #38bdf8;
+      background: rgba(12, 74, 110, 0.92);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.75);
+    }
+    .floating-callout.clean {
+      border-color: #22c55e;
+      background: rgba(6, 78, 59, 0.92);
+    }
+    .fc-title { font-size: 9px; color: #bae6fd; font-weight: 800; white-space: nowrap; }
+    .fc-rlu { font-size: 11px; color: #facc15; font-weight: 900; white-space: nowrap; }
+    .floating-callout.clean .fc-rlu { color: #4ade80; }
+
+    /* 2D Hospital Room & Photo Visor Stage */
+    #photo-world-stage {
+      position: absolute;
+      inset: 0;
+      display: none;
+      z-index: 5;
+      transition: transform 0.14s ease-out;
+    }
+    #photo-room-bg {
+      position: absolute;
+      inset: -10%;
+      background-image: url('./vr-room-pov-base.png');
+      background-size: cover;
+      background-position: center;
+      filter: brightness(0.86) contrast(1.08);
+    }
+    #photo-uv-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 50%, rgba(192, 38, 211, 0.25), rgba(56, 189, 248, 0.12) 65%, transparent 90%);
+      mix-blend-mode: screen;
+      transition: opacity 0.25s;
+    }
+    #photo-hotspots-layer {
+      position: absolute;
+      inset: 0;
+    }
+    .photo-hotspot {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.93);
+      border: 2px solid #e879f9;
+      border-radius: 9px;
+      padding: 5px 9px;
+      color: #fff;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 0 22px rgba(217, 70, 239, 0.75);
+    }
+    .photo-hotspot.active {
+      border-color: #38bdf8;
+      background: rgba(88, 28, 135, 0.95);
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.95);
+    }
+    .photo-hotspot.clean {
+      border-color: #22c55e;
+      background: rgba(6, 78, 59, 0.94);
+      box-shadow: 0 0 16px rgba(34, 197, 94, 0.6);
+    }
+    .ph-badge { font-size: 9px; color: #f5d0fe; font-weight: 800; white-space: nowrap; }
+    .ph-rlu { font-size: 12px; font-weight: 900; color: #ffffff; white-space: nowrap; }
+
+    /* Mode 4: Live Event Booth Stage */
+    #booth-arena-stage {
+      position: absolute;
+      inset: 0;
+      z-index: 8;
+      background: #070b14;
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 86px 16px 68px;
+      align-items: center;
+    }
+    .booth-card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 10px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .booth-card img {
+      width: 100%;
+      height: 310px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #334155;
+    }
+
+    /* ==================== TOP HUD OVERLAYS ==================== */
+    .hud-top-bar {
+      position: absolute;
+      top: 12px;
+      left: 14px;
+      right: 14px;
+      z-index: 30;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      gap: 10px;
+    }
+    .hud-box {
+      background: rgba(8, 12, 24, 0.88);
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(56, 189, 248, 0.65);
+      border-radius: 14px;
+      padding: 8px 13px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+    }
+    .hud-tag { font-size: 9.5px; color: #bae6fd; font-weight: 800; letter-spacing: 0.05em; }
+    .hud-main-val { font-size: 18px; font-weight: 900; color: #f87171; margin: 2px 0; }
+    .hud-sub-val { font-size: 9.5px; color: #cbd5e1; font-weight: 700; }
+    .hud-progress {
+      width: 180px;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 99px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+    #hud-rlu-bar { height: 100%; width: 55%; background: #ef4444; transition: width 0.25s; }
+
+    /* Center Room Radar */
+    #radar-hud-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      background: rgba(8, 12, 24, 0.85);
+      border: 1.5px solid rgba(250, 204, 21, 0.65);
+      border-radius: 16px;
+      padding: 6px 10px;
+    }
+    .radar-title {
+      font-size: 9px;
+      font-family: ui-monospace, monospace;
+      font-weight: 900;
+      color: #facc15;
+      letter-spacing: 0.08em;
+    }
+
+    /* Walk & 360 Turn Pad */
+    .walk-pad-box {
+      position: absolute;
+      left: 14px;
+      bottom: 84px;
+      z-index: 32;
+      background: rgba(8, 12, 24, 0.9);
+      border: 1.5px solid rgba(56, 189, 248, 0.65);
+      border-radius: 13px;
+      padding: 7px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .walk-pad-title {
+      font-size: 8.5px;
+      font-family: ui-monospace, monospace;
+      color: #7dd3fc;
+      font-weight: 800;
+    }
+    .walk-pad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 34px);
+      gap: 4px;
+    }
+    .wp-btn {
+      height: 27px;
+      border-radius: 6px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #f8fafc;
+      font-size: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: ui-monospace, monospace;
+    }
+    .wp-btn:hover { background: #0ea5e9; border-color: #7dd3fc; }
+    .wp-btn.primary { background: #0284c7; border-color: #38bdf8; }
+
+    /* First-Person Blue Nitrile Gloved Hands */
+    #hands-layer {
+      pointer-events: none;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 48px;
+      height: 290px;
+      z-index: 25;
+      overflow: hidden;
+    }
+    #left-hand-wrap {
+      position: absolute;
+      bottom: -22px;
+      left: 12%;
+      width: 245px;
+      height: 245px;
+      transition: transform 0.18s ease;
+    }
+    #right-hand-wrap {
+      position: absolute;
+      bottom: -24px;
+      right: 3%;
+      width: 265px;
+      height: 265px;
+      transition: transform 0.18s ease;
+    }
+    #left-hand-wrap.spraying { transform: translateY(-10px) scale(1.03); }
+    #right-hand-wrap.spraying { transform: translate(-14px, -16px) scale(1.05); }
+    #left-hand-wrap img, #right-hand-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 16px 26px rgba(0,0,0,0.9));
+    }
+    .meter-lcd-overlay {
+      position: absolute;
+      left: 37.1%;
+      top: 29.4%;
+      width: 26.3%;
+      height: 20.3%;
+      background: rgba(4, 19, 28, 0.95);
+      border: 1.5px solid #4ade80;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: ui-monospace, monospace;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.55);
+    }
+
+    /* Bottom Action Bar */
+    .visor-bottom-bar {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      right: 12px;
+      z-index: 34;
+      background: rgba(8, 12, 24, 0.94);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      border-radius: 13px;
+      padding: 7px 11px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    #sim-status-banner {
+      font-size: 11px;
+      color: #bae6fd;
+      font-weight: 600;
+    }
+    .action-btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .btn-primary-spray {
+      background: #0ea5e9;
+      color: #ffffff;
+      border: none;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 0 16px rgba(14, 165, 233, 0.45);
+    }
+    .btn-primary-spray:hover { background: #0284c7; }
+    .btn-uv-toggle {
+      background: rgba(168, 85, 247, 0.25);
+      color: #f3e8ff;
+      border: 1px solid #a855f7;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-uv-toggle.off {
+      background: #1e293b;
+      color: #94a3b8;
+      border-color: #475569;
+    }
+    .btn-secondary-ctrl {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ==================== RIGHT FORENSIC & CLINICAL TASK SIDEBAR ==================== */
+    .task-sidebar {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 590px;
+      overflow-y: auto;
+    }
+    .active-task-box {
+      background: #131c31;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .task-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .badge-pill {
+      background: rgba(250, 204, 21, 0.16);
+      color: #facc15;
+      border: 1px solid rgba(250, 204, 21, 0.45);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .clearance-pill {
+      font-size: 11px;
+      font-family: ui-monospace, monospace;
+      color: #38bdf8;
+      font-weight: 800;
+    }
+    #task-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 5px;
+      line-height: 1.3;
+    }
+    #task-tool {
+      font-size: 11px;
+      font-family: ui-monospace, monospace;
+      color: #38bdf8;
+      margin-bottom: 7px;
+      font-weight: 700;
+    }
+    #task-desc {
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.45;
+      margin-bottom: 9px;
+    }
+    .protocol-box {
+      background: #090e1a;
+      border-left: 3px solid #22c55e;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+    .protocol-box strong { color: #4ade80; display: block; margin-bottom: 2px; }
+    #step-list-header {
+      font-size: 10px;
+      font-weight: 800;
+      color: #94a3b8;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .step-item {
+      text-align: left;
+      background: #0b1120;
+      border: 1px solid #1e293b;
+      color: #cbd5e1;
+      padding: 8px 10px;
+      border-radius: 9px;
+      font-size: 11.2px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      transition: all 0.12s;
+    }
+    .step-item:hover { border-color: #38bdf8; color: #fff; }
+    .step-item.active {
+      background: rgba(250, 204, 21, 0.12);
+      border-color: #facc15;
+      color: #ffffff;
+    }
+    .step-item.done {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #86efac;
+    }
+    .step-arrow { font-family: ui-monospace, monospace; font-size: 10.5px; color: #38bdf8; white-space: nowrap; }
+
+    /* ==================== COURSE MODULES, HOME & QUIZ SECTIONS ==================== */
+    .module-hero {
+      background: linear-gradient(135deg, #0f172a, #1e1b4b);
+      border: 1px solid #334155;
+      border-radius: 18px;
+      padding: 22px;
+      margin-bottom: 16px;
+    }
+    .module-badge {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.18);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .module-hero h2 { font-size: 24px; margin-bottom: 6px; color: #fff; }
+    .module-hero p { font-size: 13.5px; color: #cbd5e1; line-height: 1.5; }
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .module-card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      padding: 18px;
+    }
+    .mc-tag { font-size: 10px; font-weight: 800; color: #38bdf8; margin-bottom: 6px; }
+    .module-card h3 { font-size: 16px; color: #fff; margin-bottom: 8px; }
+    .module-card p { font-size: 12.8px; color: #cbd5e1; line-height: 1.5; margin-bottom: 10px; }
+    .module-card ul { padding-left: 18px; color: #94a3b8; font-size: 12.2px; line-height: 1.55; }
+    .module-card li { margin-bottom: 5px; }
+    .interactive-calc-card {
+      background: #131c31;
+      border: 1px solid #38bdf8;
+      border-radius: 16px;
+      padding: 18px;
+      margin-top: 12px;
+    }
+    .interactive-calc-card h3 { font-size: 16px; margin-bottom: 6px; color: #38bdf8; }
+    .interactive-calc-card p { font-size: 12.5px; color: #cbd5e1; margin-bottom: 12px; }
+    .calc-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+    .calc-row input, .calc-row select {
+      background: #090e1a;
+      border: 1px solid #475569;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-left: 6px;
+    }
+    .calc-output {
+      background: #090e1a;
+      border: 1px solid #1e293b;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      color: #bae6fd;
+    }
+    /* Quiz Styles */
+    .quiz-card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .quiz-q { font-size: 14.5px; font-weight: 800; color: #fff; margin-bottom: 10px; }
+    .quiz-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    @media (max-width: 760px) { .quiz-opts { grid-template-columns: 1fr; } }
+    .quiz-opt {
+      text-align: left;
+      background: #131c31;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+    .quiz-opt.selected { border-color: #38bdf8; background: rgba(14, 165, 233, 0.2); color: #fff; }
+    .quiz-opt.correct { border-color: #22c55e; background: rgba(34, 197, 94, 0.22); color: #86efac; }
+    .quiz-opt.wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.22); color: #fca5a5; }
+    .quiz-exp { margin-top: 9px; padding: 8px 11px; border-radius: 8px; font-size: 12px; }
+    .quiz-exp.ok { background: rgba(34, 197, 94, 0.14); color: #86efac; }
+    .quiz-exp.err { background: rgba(239, 68, 68, 0.14); color: #fca5a5; }
+  </style>
+  <link rel="stylesheet" href="./medclean-visuals.css" />
+</head>
+<body>
+
+  <!-- TOP WEBSITE HEADER (MATCHING FULL FIELDREADY ACADEMY PLATFORM) -->
+  <header class="site-header">
+    <div class="brand-logo" onclick="window.setNavTab('vr')">
+      <span>🩺</span>
+      <span><span class="med">Field</span><span class="clean">Ready</span> <span class="acad">Academy</span></span>
+    </div>
+    <nav class="site-nav">
+      <a class="nav-btn fr-home" href="../" style="text-decoration:none">&larr; All modules</a>
+      <button class="nav-btn" data-nav-tab="home" onclick="window.setNavTab('home')">Home</button>
+      <button class="nav-btn active" data-nav-tab="vr" onclick="window.setNavTab('vr')">🥽 3D VR Sim</button>
+      <button class="nav-btn" data-nav-tab="fundamentals" onclick="window.setNavTab('fundamentals')">Fundamentals</button>
+      <button class="nav-btn" data-nav-tab="facility" onclick="window.setNavTab('facility')">Facility Cleaning</button>
+      <button class="nav-btn" data-nav-tab="instruments" onclick="window.setNavTab('instruments')">Instrument Processing</button>
+      <button class="nav-btn" data-nav-tab="waste" onclick="window.setNavTab('waste')">Medical Waste</button>
+      <button class="nav-btn" data-nav-tab="spills" onclick="window.setNavTab('spills')">Spill Management</button>
+      <button class="nav-btn" data-nav-tab="qa" onclick="window.setNavTab('qa')">Quality Assurance</button>
+      <button class="nav-btn" data-nav-tab="quiz" onclick="window.setNavTab('quiz')">Quiz</button>
+    </nav>
+  </header>
+
+  <main class="page-wrap">
+
+    <!-- ==================== SECTION 1: 3D VR SIMULATOR ==================== -->
+    <section class="page-section" id="section-vr">
+      <div class="sim-intro-bar">
+        <div class="sim-intro-text">
+          <strong>3D VR Biohazard &amp; Hospital Remediation Simulator:</strong> Drag mouse 360° to inspect all 4 walls &amp; the floor, click anywhere on the 3D floor to walk there, or use W/A/S/D &amp; the Walk Pad to remediate all 8 markers!
+        </div>
+        <div class="mobile-hint">Swipe sideways on the 3D view to look around, tap the floor to walk, and tap a marker or a step to clean it.</div>
+        <div class="sim-mode-bar">
+          <button class="sim-mode-btn active" id="mode-crime3d" data-sim-mode="crime3d" onclick="window.setSimMode('crime3d')">1. 3D Crime Scene Lab (Walkable 3D)</button>
+          <button class="sim-mode-btn" id="mode-hospital" data-sim-mode="hospital" onclick="window.setSimMode('hospital')">2. Hospital Patient Room VR</button>
+          <button class="sim-mode-btn" id="mode-photovisor" data-sim-mode="photovisor" onclick="window.setSimMode('photovisor')">3. Forensic UV Photo Visor</button>
+          <button class="sim-mode-btn" id="mode-Arena" data-sim-mode="booth" onclick="window.setSimMode('booth')">4. Live Event 3D Booth Arena</button>
+        </div>
+      </div>
+
+      <div class="sim-grid">
+        <!-- LEFT / CENTER 3D VIEWPORT -->
+        <div class="visor-viewport" id="visor-viewport">
+          <!-- Mode 1: Real Three.js 3D Walkable Crime Scene Room -->
+          <div id="three-crime-mount"></div>
+          <div id="floating-callouts-layer"></div>
+
+          <!-- Mode 2 & 3: Hospital Patient Room & Photo Visor -->
+          <div id="photo-world-stage">
+            <div id="photo-room-bg"></div>
+            <div id="photo-uv-residue">
+              <div class="uv-layer" data-task="2" style="background-image:url('./photos/uv-residue-task-2.png')"></div>
+              <div class="uv-layer" data-task="3" style="background-image:url('./photos/uv-residue-task-3.png')"></div>
+              <div class="uv-layer" data-task="4" style="background-image:url('./photos/uv-residue-task-4.png')"></div>
+              <div class="uv-layer" data-task="5" style="background-image:url('./photos/uv-residue-task-5.png')"></div>
+              <div class="uv-layer" data-task="6" style="background-image:url('./photos/uv-residue-task-6.png')"></div>
+              <div class="uv-layer" data-task="7" style="background-image:url('./photos/uv-residue-task-7.png')"></div>
+              <div class="uv-layer" data-task="8" style="background-image:url('./photos/uv-residue-task-8.png')"></div>
+            </div>
+            <div id="photo-uv-overlay"></div>
+            <div id="photo-hotspots-layer"></div>
+          </div>
+
+          <!-- Mode 4: Live Event 3D Booth Arena -->
+          <div id="booth-arena-stage">
+            <div class="booth-card">
+              <div class="mc-tag">MULTI-TRAINEE VR ARENA</div>
+              <img id="arena-preview" src="./vr-live-event-training.png" alt="Live VR Medical Training Event" loading="lazy" />
+              <p style="font-size:12px;color:#cbd5e1;">Live instructor-led 5-headset medical sanitation arena with real-time ATP kill telemetry and big-screen projection.</p>
+            </div>
+            <div class="booth-card">
+              <div class="mc-tag">HEADSET VISOR TELEMETRY HUD</div>
+              <img src="./vr-headset-pov-hud.png" alt="VR Headset POV Telemetry HUD" loading="lazy" />
+              <p style="font-size:12px;color:#cbd5e1;">First-person UV-C &amp; ATP visor scoring interface for live certification competitions and hospital EVS onboarding.</p>
+            </div>
+          </div>
+
+          <!-- Top HUD: ATP Bioburden + Room Radar + PPE Status -->
+          <div class="hud-top-bar">
+            <div class="hud-box">
+              <div class="hud-tag">ATP BIOBURDEN:</div>
+              <div class="hud-main-val" id="hud-rlu-text">1240 RLU (BIOHAZARD)</div>
+              <div class="hud-sub-val" id="hud-rlu-sub">EVIDENCE FOUND: 3/8 • CLEANED: 0/8</div>
+              <div class="hud-progress"><div id="hud-rlu-bar"></div></div>
+            </div>
+
+            <div id="radar-hud-box">
+              <div class="radar-title">ROOM RADAR</div>
+              <canvas id="radar-canvas" width="96" height="96"></canvas>
+            </div>
+
+            <div class="hud-box" id="ppe-hud-box" style="border-color:rgba(34,197,94,0.65);">
+              <div class="hud-tag" style="color:#86efac;">✓ PPE HAZMAT:</div>
+              <div style="font-size:12.5px;font-weight:900;color:#ffffff;margin:2px 0;">GOWN, N95, SHIELD, GLOVES</div>
+              <div class="hud-sub-val" style="color:#38bdf8;" id="hud-pos-text">POS: (-0.2m, 4.3m)</div>
+            </div>
+          </div>
+
+          <!-- Bottom-Left Walk & 360 Turn Pad -->
+          <div class="walk-pad-box">
+            <div class="walk-pad-title">WALK &amp; 360° TURN</div>
+            <div class="walk-pad-grid">
+              <button class="wp-btn" onclick="window.nudgeWalk('TL')" title="Turn Left (Q / Left Arrow)">◄L</button>
+              <button class="wp-btn primary" onclick="window.nudgeWalk('W')" title="Walk Forward (W / Up Arrow)">▲W</button>
+              <button class="wp-btn" onclick="window.nudgeWalk('TR')" title="Turn Right (E / Right Arrow)">R►</button>
+              <button class="wp-btn" onclick="window.nudgeWalk('A')" title="Strafe Left (A)">◄A</button>
+              <button class="wp-btn" onclick="window.nudgeWalk('S')" title="Walk Backward (S / Down Arrow)">▼S</button>
+              <button class="wp-btn" onclick="window.nudgeWalk('D')" title="Strafe Right (D)">D►</button>
+            </div>
+          </div>
+
+          <!-- First-Person Blue Nitrile Gloved Hands + ATP Meter + Sprayer -->
+          <div id="hands-layer">
+            <div id="left-hand-wrap">
+              <img src="./left-hand-atp.png" alt="Left Gloved Hand ATP Luminometer" />
+              <div class="meter-lcd-overlay">
+                <div style="font-size:6.5px;color:#7dd3fc;font-weight:800;">ATP METER</div>
+                <div style="font-size:15px;font-weight:900;color:#f87171;line-height:1;" id="lcd-num">1240</div>
+                <div style="font-size:6.5px;color:#4ade80;font-weight:800;" id="lcd-status">RLU HIGH !</div>
+              </div>
+            </div>
+            <div id="right-hand-wrap">
+              <svg viewBox="0 0 360 360" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;">
+                <defs>
+                  <linearGradient id="sprayGrad" x1="1" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stop-color="rgba(56,189,248,0.92)" />
+                    <stop offset="55%" stop-color="rgba(56,189,248,0.4)" />
+                    <stop offset="100%" stop-color="rgba(56,189,248,0)" />
+                  </linearGradient>
+                </defs>
+                <polygon id="svg-spray-cone" points="126,148 -70,20 -15,-30" fill="url(#sprayGrad)" opacity="0.45" />
+              </svg>
+              <img src="./right-hand-sprayer.png" alt="Right Gloved Hand Enzymatic Sprayer" />
+            </div>
+          </div>
+
+          <!-- Bottom Control Bar -->
+          <div class="visor-bottom-bar">
+            <span id="sim-status-banner">CRIME SCENE BIOHAZARD LAB — Walk in 360° with W/A/S/D, click floor to walk, or click any Evidence Marker (#1–#8) to clean!</span>
+            <div class="action-btn-group">
+              <button class="btn-primary-spray" id="exec-btn" onclick="window.triggerCleanAction()">▶ Spray &amp; Clean Active Hotspot</button>
+              <button class="btn-uv-toggle" id="uv-btn" onclick="window.toggleUVMode()">👁 UV Blacklight: ON</button>
+              <button class="btn-secondary-ctrl" id="sound-btn" onclick="window.toggleSoundMode()" title="Mute/Unmute Audio">🔊</button>
+              <button class="btn-secondary-ctrl" id="reset-btn" onclick="window.resetSimulator()">↻ Reset Scene</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT SIDEBAR: ACTIVE TASK, PROTOCOL & 8-STEP LIST -->
+        <aside class="task-sidebar">
+          <div class="active-task-box">
+            <div class="task-meta-row">
+              <span class="badge-pill" id="task-badge">Forensic Evidence #1 of 8</span>
+              <span class="clearance-pill" id="task-clearance">Clearance: ≤25 RLU</span>
+            </div>
+            <div id="task-title">Evidence #1: Bloody Shoeprint Trail on Floor (1,240 RLU)</div>
+            <div id="task-tool">Active VR Tool: Enzymatic Protein Dissolver + Microfiber Mop</div>
+            <div id="task-desc">Walk forward to Evidence Marker #1 on the floor. Spray the bloody shoeprint trail before walking deeper into the room so you don't track bloodborne pathogens outward.</div>
+            <div class="protocol-box">
+              <strong>🛡️ Forensic &amp; OSHA 1910.1030 / CDC Protocol</strong>
+              <span id="task-protocol">Crime-scene remediation always establishes a clean perimeter at the threshold first to prevent cross-tracking HIV/HBV/HCV outside the hot zone.</span>
+            </div>
+          </div>
+
+          <div id="step-list-header">8 CRIME-SCENE BIOHAZARDS (CLICK ANY TO WALK THERE IN 3D)</div>
+          <div class="step-list" id="step-list"></div>
+          <div style="font-size:10px;color:#64748b;text-align:right;margin-top:auto;">
+            Powered by THE FINNESE GROUP LLC
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ==================== SECTION 0: HOME OVERVIEW ==================== -->
+    <section class="page-section" id="section-home" style="display:none;">
+      <div class="module-hero">
+        <span class="module-badge">FIELDREADY ACADEMY • INTERACTIVE 3D VR TRAINING PLATFORM</span>
+        <h2>Healthcare Environmental Services &amp; Forensic Biohazard Remediation</h2>
+        <p>Master OSHA 29 CFR 1910.1030 Bloodborne Pathogens, CDC Terminal Patient Room Disinfection, AAMI ST79 Sterile Processing, and Quantitative ATP Bioluminescence (<25 RLU) Clearance in our interactive 3D simulator.</p>
+        <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;">
+          <button class="btn-primary-spray" onclick="window.setNavTab('vr');window.setSimMode('crime3d');">🥽 Launch 3D Walkable Crime Scene Lab</button>
+          <button class="btn-uv-toggle" onclick="window.setNavTab('vr');window.setSimMode('hospital');">🏥 Launch Hospital Patient Room VR</button>
+          <button class="btn-secondary-ctrl" onclick="window.setNavTab('quiz')">📝 Take Practice Exam</button>
+        </div>
+      </div>
+      <div class="module-grid">
+        <div class="module-card" style="cursor:pointer;" onclick="window.setNavTab('fundamentals')">
+          <div class="mc-tag">MODULE 1</div>
+          <h3>Fundamentals &amp; Spaulding Classification</h3>
+          <p>Why gross organic blood and biofilm must be physically disrupted before chemical disinfectants can work.</p>
+        </div>
+        <div class="module-card" style="cursor:pointer;" onclick="window.setNavTab('facility')">
+          <div class="mc-tag">MODULE 2</div>
+          <h3>Facility &amp; Terminal Room Cleaning</h3>
+          <p>High-to-low clockwise workflow, 16-surface S-fold microfiber technique, and color-coded isolation protocols.</p>
+        </div>
+        <div class="module-card" style="cursor:pointer;" onclick="window.setNavTab('instruments')">
+          <div class="mc-tag">MODULE 3</div>
+          <h3>Surgical Instrument Processing (SPD)</h3>
+          <p>Point-of-use enzymatic foam, below-waterline brushing, ultrasonic cavitation, and steam autoclave BIs.</p>
+        </div>
+        <div class="module-card" style="cursor:pointer;" onclick="window.setNavTab('waste')">
+          <div class="mc-tag">MODULE 4</div>
+          <h3>Regulated Medical Waste &amp; Sharps</h3>
+          <p>DOT 6-mil red biohazard bag criteria, goose-neck sealing, and FDA sharps container 3/4 fill compliance.</p>
+        </div>
+        <div class="module-card" style="cursor:pointer;" onclick="window.setNavTab('spills')">
+          <div class="mc-tag">MODULE 5</div>
+          <h3>Bloodborne Spill Management</h3>
+          <p>Outside-in perimeter containment and interactive 1:10 sporicidal sodium hypochlorite dilution calculator.</p>
+        </div>
+        <div class="module-card" style="cursor:pointer;" onclick="window.setNavTab('qa')">
+          <div class="mc-tag">MODULE 6</div>
+          <h3>Quality Assurance &amp; ATP Auditing</h3>
+          <p>Quantitative luciferin/luciferase RLU testing vs. UV fluorescent markers and visual inspections.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== COURSE MODULE SECTIONS ==================== -->
+    <section class="page-section" id="section-fundamentals" style="display:none;"><div id="module-content-fundamentals"></div></section>
+    <section class="page-section" id="section-facility" style="display:none;"><div id="module-content-facility"></div></section>
+    <section class="page-section" id="section-instruments" style="display:none;"><div id="module-content-instruments"></div></section>
+    <section class="page-section" id="section-waste" style="display:none;"><div id="module-content-waste"></div></section>
+    <section class="page-section" id="section-spills" style="display:none;"><div id="module-content-spills"></div></section>
+    <section class="page-section" id="section-qa" style="display:none;"><div id="module-content-qa"></div></section>
+
+    <!-- ==================== SECTION: CERTIFICATION QUIZ ==================== -->
+    <section class="page-section" id="section-quiz" style="display:none;">
+      <div class="module-hero">
+        <span class="module-badge">PRACTICE EXAM • 80% TO PASS • 8 PROTOCOL + 4 PHOTO QUESTIONS</span>
+        <h2>FieldReady Academy — Forensic &amp; Clinical Decontamination Exam</h2>
+        <p id="quiz-score-banner">Answer every question below, then click Grade Practice Exam.</p>
+        <div style="margin-top:12px;display:flex;gap:10px;">
+          <button class="btn-primary-spray" onclick="window.submitQuizExam()">✓ Grade Practice Exam</button>
+          <button class="btn-secondary-ctrl" onclick="window.resetQuizExam()">↻ Reset Exam</button>
+        </div>
+      </div>
+      <div id="quiz-questions-mount"></div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p><strong>FieldReady Academy is an educational concept demo.</strong> RLU readings are simulated, the practice exam is not an accredited certification, and nothing here replaces facility policy, product labels, manufacturer instructions or OSHA/CDC requirements. Images labeled AI ILLUSTRATION are AI-generated.</p>
+    <p class="sf-credit">Powered by THE FINNESE GROUP LLC</p>
+  </footer>
+
+  <script src="./medclean-3d-engine.js"></script>
+  <script src="./medclean-diagrams.js"></script>
+  <script src="./medclean-extras.js"></script>
+</body>
+</html>
